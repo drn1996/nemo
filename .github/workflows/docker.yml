@@ -3,7 +3,7 @@ name: Build CI Image
 on:
   push:
     branches: [main]
-    paths: [docker/Dockerfile]
+    paths: [docker/ci.Dockerfile]
 
 permissions:
   packages: write
@@ -25,5 +25,6 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: docker
+          file: docker/ci.Dockerfile
           push: true
           tags: ghcr.io/drn1996/nemo-ci:latest
