@@ -2,30 +2,49 @@
 name = "nemo"
 version = "0.1.0"
 edition = "2024"
+build = "build.rs"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+slint = "1"
 wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
 
 [dependencies.web-sys]
 version = "0.3"
 features = [
     "Window",
-    "Document",
-    "HtmlCanvasElement",
-    "WebGlRenderingContext",
-    "WebGlProgram",
-    "WebGlShader",
-    "WebGlBuffer",
-    "WebGlUniformLocation",
-    "MouseEvent",
-    "KeyboardEvent",
-    "EventTarget",
-    "Element",
+    "Navigator",
+    "MediaDevices",
+    "MediaStream",
+    "MediaStreamConstraints",
+    "MediaDeviceInfo",
+    "MediaDeviceKind",
+    "MediaStreamTrack",
+    "AudioContext",
+    "BaseAudioContext",
+    "AudioNode",
+    "AnalyserNode",
+    "MediaStreamAudioSourceNode",
+    "MediaRecorder",
+    "MediaRecorderOptions",
+    "BlobEvent",
+    "Blob",
+    "AudioDestinationNode",
+    "AudioBuffer",
+    "AudioBufferSourceNode",
+    "AudioScheduledSourceNode",
+    "console",
 ]
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.2", features = ["js"] }
+
+[build-dependencies]
+slint-build = "1"
 
 [profile.release]
 opt-level = "s"

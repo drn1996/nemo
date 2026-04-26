@@ -1,0 +1,265 @@
+import { ComboBox } from "std-widgets.slint";
+
+export struct TrackInfo {
+    label: string,
+    waveform: string,
+    color: color,
+    is-armed: bool,
+}
+
+export component App inherits Window {
+    background: #0a0a0a;
+
+    in property <bool> started: false;
+    in property <[string]> device-names: [];
+    in-out property <int> selected-device: 0;
+    in property <string> status-text: "";
+
+    in property <bool> recording: false;
+    in property <bool> armed: false;
+    in property <bool> playing: false;
+    in property <int> track-count: 0;
+    in property <string> time-display: "";
+    in property <[TrackInfo]> tracks: [];
+    in property <float> playhead-pos: -1;
+
+    property <length> top-h: 44px;
+    property <length> track-h: 64px;
+
+    out property <float> wave-width: self.width / 1px;
+
+    callback start-clicked();
+    callback device-selected(int);
+    callback record-clicked();
+    callback play-clicked();
+    callback clear-clicked();
+
+    // ── Top bar ────────────────────────────────────────────────
+    if root.started : Rectangle {
+        y: 0;
+        width: parent.width;
+        height: root.top-h;
+        background: #111111;
+
+        HorizontalLayout {
+            padding: 6px;
+            spacing: 10px;
+
+            ComboBox {
+                width: 200px;
+                height: 32px;
+                model: root.device-names;
+                current-index <=> root.selected-device;
+                selected(value) => { root.device-selected(self.current-index); }
+            }
+
+            Rectangle { horizontal-stretch: 1; }
+
+            // Record
+            Rectangle {
+                width: 40px;
+                height: 32px;
+                border-radius: 6px;
+                border-width: 1.5px;
+                border-color: root.recording ? #ff0000 : (root.armed ? #ffaa00 : #444444);
+                background: root.recording ? #331111 : (root.armed ? #332200 : #1a1a1a);
+
+                Rectangle {
+                    width: 14px;
+                    height: 14px;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    border-radius: root.recording ? 3px : 7px;
+                    background: root.recording ? #ff0000 : (root.armed ? #ffaa00 : #cc0000);
+                }
+
+                TouchArea { clicked => { root.record-clicked(); } }
+            }
+
+            // Play / Stop
+            Rectangle {
+                width: 40px;
+                height: 32px;
+                border-radius: 6px;
+                border-width: 1.5px;
+                border-color: root.track-count > 0 ? (root.playing ? #00ff00 : #444444) : #222222;
+                background: root.playing ? #113311 : #1a1a1a;
+
+                Path {
+                    width: 14px;
+                    height: 14px;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    commands: root.playing ? "M 0 0 L 14 0 L 14 14 L 0 14 Z" : "M 0 0 L 14 7 L 0 14 Z";
+                    fill: root.track-count > 0 ? (root.playing ? #00ff00 : #00aa00) : #333333;
+                }
+
+                TouchArea { clicked => { root.play-clicked(); } }
+            }
+
+            // Clear
+            Rectangle {
+                width: 40px;
+                height: 32px;
+                border-radius: 6px;
+                border-width: 1.5px;
+                border-color: root.track-count > 0 && !root.recording && !root.armed ? #444444 : #222222;
+                background: #1a1a1a;
+
+                Path {
+                    width: 10px;
+                    height: 10px;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    commands: "M 0 0 L 10 10 M 10 0 L 0 10";
+                    stroke: root.track-count > 0 && !root.recording && !root.armed ? #ff4444 : #333333;
+                    stroke-width: 2px;
+                }
+
+                TouchArea { clicked => { root.clear-clicked(); } }
+            }
+
+            // Time display
+            Text {
+                vertical-alignment: center;
+                text: root.time-display;
+                color: root.recording ? #ff4444 : (root.playing ? #00ff00 : #666666);
+                font-size: 14px;
+                font-weight: 700;
+            }
+        }
+    }
+
+    // ── Track area ─────────────────────────────────────────────
+    if root.started : Rectangle {
+        y: root.top-h;
+        width: parent.width;
+        height: parent.height - root.top-h;
+        background: #0a0a0a;
+        clip: true;
+
+        Flickable {
+            width: parent.width;
+            height: parent.height;
+
+            VerticalLayout {
+                padding: 4px;
+                spacing: 3px;
+
+                for track in root.tracks : Rectangle {
+                    height: root.track-h;
+                    background: #111111;
+                    border-radius: 4px;
+
+                    // Color bar
+                    Rectangle {
+                        x: 0;
+                        y: 0;
+                        width: 4px;
+                        height: parent.height;
+                        border-radius: 2px;
+                        background: track.color;
+                    }
+
+                    // Track number
+                    Text {
+                        x: 10px;
+                        width: 20px;
+                        text: track.label;
+                        color: #555555;
+                        font-size: 11px;
+                        vertical-alignment: center;
+                    }
+
+                    // Waveform
+                    Path {
+                        x: 34px;
+                        width: parent.width - 38px;
+                        height: parent.height;
+                        commands: track.waveform;
+                        fill: track.color;
+                        opacity: 0.7;
+                    }
+
+                    // Armed overlay
+                    if track.is-armed : Text {
+                        width: parent.width;
+                        height: parent.height;
+                        text: "Waiting for signal...";
+                        color: #ffaa0088;
+                        font-size: 13px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+
+        // Playhead
+        if root.playhead-pos >= 0 : Rectangle {
+            x: 34px + root.playhead-pos * (parent.width - 38px);
+            y: 0;
+            width: 2px;
+            height: parent.height;
+            background: #ffffff99;
+        }
+
+        // Empty state
+        if root.tracks.length == 0 : Text {
+            width: parent.width;
+            height: parent.height;
+            text: "Press record to start";
+            color: #222222;
+            font-size: 18px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+
+    // ── Start screen ───────────────────────────────────────────
+    if !root.started && root.status-text == "" : Rectangle {
+        width: parent.width;
+        height: parent.height;
+
+        Rectangle {
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2 - 20px;
+            width: 220px;
+            height: 64px;
+            border-color: #00ff00;
+            border-width: 2px;
+            border-radius: 8px;
+            background: transparent;
+
+            Text {
+                text: "START";
+                color: #00ff00;
+                font-size: 24px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            TouchArea { clicked => { root.start-clicked(); } }
+        }
+
+        Text {
+            y: (parent.height / 2) + 30px;
+            width: parent.width;
+            text: "nemo harmonizer";
+            color: #333333;
+            font-size: 13px;
+            horizontal-alignment: center;
+        }
+    }
+
+    // Status text
+    if root.status-text != "" : Text {
+        width: parent.width;
+        height: parent.height;
+        text: root.status-text;
+        color: #00ff00;
+        font-size: 18px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
