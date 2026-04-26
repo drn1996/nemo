@@ -7,6 +7,7 @@ on:
     paths: [docker/ci.Dockerfile]
 
 permissions:
+  contents: read
   packages: write
 
 jobs:
