@@ -6,7 +6,6 @@ on:
 
 permissions:
   contents: read
-  packages: read
   pages: write
   id-token: write
 
@@ -19,9 +18,6 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/drn1996/nemo-ci:latest
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
